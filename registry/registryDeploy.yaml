@@ -1,0 +1,45 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: registrydata
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: csi-xtremio-high
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  containers:
+  - name: registry
+    image: registry:latest
+    imagePullPolicy: Always
+    ports:
+      - containerPort: 5000
+    volumeMounts:
+    - name: registry-data
+      mountPath: /var/lib/registry
+  volumes:
+  - name: registry-data
+    persistentVolumeClaim:
+      claimName: registrydata
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: registry
+spec:
+  selector:
+    app: registry
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: LoadBalancer
