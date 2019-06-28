@@ -1,0 +1,71 @@
+apiVersion: snapshot.storage.k8s.io/v1alpha1
+kind: VolumeSnapshot
+metadata:
+   name: sql-snap3
+   namespace: default
+spec:
+   snapshotClassName: csi-xtremio-xvc
+   source:
+      name: sql-gold-new
+      kind: PersistentVolumeClaim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: restapi-combined-pvc
+spec:
+  storageClassName: csi-xtremio-sc
+  dataSource:
+    name: sql-snap3
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: restapi-combined-depl
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: restapi-combined-depl
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: restapi-combined-app
+        image: dellregistry.com:5000/mssql-restapi:latest
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5000
+        env:
+          - name: MSSQL_HOST
+            value: "localhost"
+          - name: MSSQL_PASSWORD
+            value: "sqladmin#02"
+      - name: mssql
+        image: dellregistry.com:5000/mssql/rhel/server:2019-CTP3.0
+        ports:
+        - containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mssql
+              key: SA_PASSWORD
+        volumeMounts:
+        - name: mssqldb
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: mssqldb
+        persistentVolumeClaim:
+          claimName: restapi-combined-pvc
