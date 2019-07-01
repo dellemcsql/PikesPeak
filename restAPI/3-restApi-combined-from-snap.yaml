@@ -6,7 +6,7 @@ metadata:
 spec:
    snapshotClassName: csi-xtremio-xvc
    source:
-      name: sql-gold-new
+      name: sql-pvc-restorefromsnap
       kind: PersistentVolumeClaim
 ---
 apiVersion: v1

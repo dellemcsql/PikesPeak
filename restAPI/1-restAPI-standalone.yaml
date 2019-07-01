@@ -13,7 +13,7 @@ spec:
       - containerPort: 5000
     env:
       - name: MSSQL_HOST
-        value: "10.230.31.38"
+        value: "10.230.31.32"
       - name: MSSQL_PASSWORD
         value: "sqladmin#02"
 ---
