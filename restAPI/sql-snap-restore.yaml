@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: snap-restore-pvc
+spec:
+  storageClassName: csi-xtremio-sc
+  dataSource:
+    name: b4-table-update-snap
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 150Gi
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: snap-restore-depl
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: snap-restore-depl
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: snap-restore-app
+        image: dellregistry.com:5000/mssql-restapi:latest
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 5000
+        env:
+          - name: MSSQL_HOST
+            value: "localhost"
+          - name: MSSQL_PASSWORD
+            value: "sqladmin#02"
+      - name: snap-restore-mssql
+        image: dellregistry.com:5000/mssql/rhel/server:2019-CTP3.0
+        ports:
+        - containerPort: 1433
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_SA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mssql
+              key: SA_PASSWORD
+        volumeMounts:
+        - name: mssqldb
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: mssqldb
+        persistentVolumeClaim:
+          claimName: snap-restore-pvc
